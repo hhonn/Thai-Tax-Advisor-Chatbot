@@ -59,7 +59,7 @@ python ingest/build_index.py --input data/processed/tax_chunks.jsonl --persist-d
 ### 4) รัน API server
 
 ```bash
-uvicorn app.api:app --reload --host 127.0.0.1 --port 8000
+uvicorn app.main:app --reload --host 127.0.0.1 --port 8000
 ```
 
 ### 5) ทดสอบ API
@@ -86,3 +86,6 @@ python evaluate/run_eval.py --testset evaluate/testset.json --output evaluate/re
 
 - ไม่ใช่คำปรึกษาภาษีหรือกฎหมายอย่างเป็นทางการ
 - ควรตรวจสอบข้อมูลล่าสุดจากกรมสรรพากรหรือผู้เชี่ยวชาญก่อนตัดสินใจ
+
+Reset
+python -m ingest.build_index --reset

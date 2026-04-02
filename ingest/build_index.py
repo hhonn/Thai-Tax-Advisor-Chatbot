@@ -8,7 +8,7 @@ from typing import List
 
 from langchain_chroma import Chroma
 from langchain_core.documents import Document
-from langchain_huggingface import HuggingFaceEmbeddings
+from langchain_ollama import OllamaEmbeddings
 from tqdm import tqdm
 
 
@@ -25,8 +25,10 @@ def load_chunks(path: Path) -> List[dict]:
 def main() -> None:
     parser = argparse.ArgumentParser(description="Build Chroma index from chunked JSONL")
     parser.add_argument("--input", type=Path, default=Path("data/processed/tax_chunks.jsonl"))
-    parser.add_argument("--persist-dir", type=Path, default=Path("data/chroma_tax"))
-    parser.add_argument("--embedding-model", type=str, default="BAAI/bge-m3")
+    parser.add_argument("--persist-dir", type=Path, default=Path("data/vector_store"))
+    parser.add_argument("--collection-name", type=str, default="tax_law_docs")
+    parser.add_argument("--embedding-model", type=str, default="all-minilm")
+    parser.add_argument("--ollama-base-url", type=str, default="http://localhost:11434")
     parser.add_argument("--batch-size", type=int, default=200)
     parser.add_argument("--reset", action="store_true")
     args = parser.parse_args()
@@ -47,9 +49,9 @@ def main() -> None:
         if row.get("text")
     ]
 
-    embedding = HuggingFaceEmbeddings(
-        model_name=args.embedding_model,
-        encode_kwargs={"normalize_embeddings": True},
+    embedding = OllamaEmbeddings(
+        model=args.embedding_model,
+        base_url=args.ollama_base_url,
     )
 
     db = None
@@ -60,6 +62,7 @@ def main() -> None:
                 documents=batch,
                 embedding=embedding,
                 persist_directory=str(args.persist_dir),
+                collection_name=args.collection_name,
             )
         else:
             db.add_documents(batch)

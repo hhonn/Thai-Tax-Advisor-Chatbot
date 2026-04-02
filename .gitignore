@@ -20,3 +20,9 @@ evaluate/results/
 .DS_Store
 Thumbs.db
 
+
+.vscode/
+*.bin
+*.sqlite3
+data/*
+*/chroma.sqlite3

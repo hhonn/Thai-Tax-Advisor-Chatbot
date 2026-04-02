@@ -9,8 +9,6 @@ venv/
 .mypy_cache/
 
 # Vector store and generated corpora
-data/chroma_tax/
-data/processed/*.jsonl
 data/raw/html/
 data/raw/pdf/
 
@@ -22,6 +20,3 @@ evaluate/results/
 .DS_Store
 Thumbs.db
 
-# Ignore BM25 generated indexes
-data/processed/*.pkl
-data/*.pkl

@@ -1,0 +1,27 @@
+__pycache__/
+*.py[cod]
+*.pyo
+*.pyd
+.env
+.venv/
+venv/
+.pytest_cache/
+.mypy_cache/
+
+# Vector store and generated corpora
+data/chroma_tax/
+data/processed/*.jsonl
+data/raw/html/
+data/raw/pdf/
+
+# Evaluation outputs
+evaluate/results/
+*.log
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# Ignore BM25 generated indexes
+data/processed/*.pkl
+data/*.pkl

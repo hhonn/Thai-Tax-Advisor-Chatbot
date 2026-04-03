@@ -22,6 +22,7 @@
 		"@tailwindcss/forms": "^0.5.11",
 		"@tailwindcss/typography": "^0.5.19",
 		"@tailwindcss/vite": "^4.1.18",
+		"@types/dompurify": "^3.0.5",
 		"@types/node": "^24",
 		"eslint": "^10.0.3",
 		"eslint-config-prettier": "^10.1.8",
@@ -41,6 +42,8 @@
 		"@fontsource-variable/google-sans": "^5.2.1",
 		"@fontsource-variable/ibm-plex-sans": "^5.2.8",
 		"@fontsource-variable/noto-sans-thai-looped": "^5.2.3",
-		"@fontsource/ibm-plex-sans-thai": "^5.2.8"
+		"@fontsource/ibm-plex-sans-thai": "^5.2.8",
+		"dompurify": "^3.3.3",
+		"marked": "^17.0.5"
 	}
 }

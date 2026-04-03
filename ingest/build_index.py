@@ -8,7 +8,7 @@ from typing import List
 
 from langchain_chroma import Chroma
 from langchain_core.documents import Document
-from langchain_ollama import OllamaEmbeddings
+from langchain_huggingface import HuggingFaceEmbeddings
 from tqdm import tqdm
 
 
@@ -27,8 +27,7 @@ def main() -> None:
     parser.add_argument("--input", type=Path, default=Path("data/processed/tax_chunks.jsonl"))
     parser.add_argument("--persist-dir", type=Path, default=Path("data/vector_store"))
     parser.add_argument("--collection-name", type=str, default="tax_law_docs")
-    parser.add_argument("--embedding-model", type=str, default="all-minilm")
-    parser.add_argument("--ollama-base-url", type=str, default="http://localhost:11434")
+    parser.add_argument("--embedding-model", type=str, default="BAAI/bge-m3")
     parser.add_argument("--batch-size", type=int, default=200)
     parser.add_argument("--reset", action="store_true")
     args = parser.parse_args()
@@ -49,9 +48,9 @@ def main() -> None:
         if row.get("text")
     ]
 
-    embedding = OllamaEmbeddings(
-        model=args.embedding_model,
-        base_url=args.ollama_base_url,
+    embedding = HuggingFaceEmbeddings(
+        model_name=args.embedding_model,
+        encode_kwargs={"normalize_embeddings": True},
     )
 
     db = None

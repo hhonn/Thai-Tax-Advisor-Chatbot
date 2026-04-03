@@ -2,6 +2,7 @@
 	import { browser } from '$app/environment';
 	import NavBar from '$lib/components/NavBar.svelte';
 	import ChatMessage from '$lib/components/ChatMessage.svelte';
+	import Markdown from '$lib/components/Markdown.svelte';
 	import MessageInput from '$lib/components/MessageInput.svelte';
 	import ItemButton from '$lib/components/ItemButton.svelte';
 
@@ -65,7 +66,7 @@
 
 		if (!db) return;
 		const store = db.transaction('chats', 'readwrite').objectStore('chats');
-		store.add(chat).onerror = () => {
+		store.add($state.snapshot(chat)).onerror = () => {
 			console.error('Failed to add chat to IndexedDB:', chat);
 		};
 	}
@@ -78,12 +79,12 @@
 		if (!updated) return;
 
 		const store = db.transaction('chats', 'readwrite').objectStore('chats');
-		store.put(updated).onerror = () => {
+		store.put($state.snapshot(updated)).onerror = () => {
 			console.error('Failed to update chat in IndexedDB with id:', id);
 		};
 	}
 
-	function deleteChat(id: number) {
+	function _deleteChat(id: number) {
 		chatArray = chatArray.filter((chat) => chat.id !== id);
 
 		if (!db) return;
@@ -99,14 +100,81 @@
 	const randomItemN = 3;
 	const randomPreset = quickAskPreset.sort(() => 0.5 - Math.random()).slice(0, randomItemN);
 
-	function handleSend(message: string) {
-		// TODO: wire up to backend API
-		putChat({
+	// Build history from chatArray for the backend (exclude waiting/skeleton entries)
+	function buildHistory() {
+		return chatArray
+			.filter((c) => !c.isWaiting)
+			.map((c) => ({ role: c.role === 'ai' ? 'assistant' : 'user', content: c.message }));
+	}
+
+	async function handleSend(message: string) {
+		const userEntry: ChatEntry = {
 			id: Date.now(),
 			role: 'user',
 			message,
 			timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
-		});
+		};
+		putChat(userEntry);
+
+		// Insert a waiting AI entry (shows skeleton)
+		const aiId = Date.now() + 1;
+		const aiEntry: ChatEntry = {
+			id: aiId,
+			role: 'ai',
+			isWaiting: true,
+			message: '',
+			timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
+		};
+		putChat(aiEntry);
+
+		try {
+			const res = await fetch('/api/v1/chat/stream', {
+				method: 'POST',
+				headers: { 'Content-Type': 'application/json' },
+				body: JSON.stringify({ message, history: buildHistory() })
+			});
+
+			if (!res.ok || !res.body) {
+				throw new Error(`HTTP ${res.status}`);
+			}
+
+			const reader = res.body.getReader();
+			const decoder = new TextDecoder();
+			let accumulated = '';
+			let buffer = '';
+
+			// Read SSE stream and accumulate tokens
+			while (true) {
+				const { done, value } = await reader.read();
+				if (done) break;
+
+				buffer += decoder.decode(value, { stream: true });
+
+				// Process complete SSE lines from the buffer
+				const lines = buffer.split('\n');
+				buffer = lines.pop() ?? ''; // keep incomplete last line
+
+				for (const line of lines) {
+					if (!line.startsWith('data: ')) continue;
+					const data = line.slice(6).trim();
+					if (data === '[DONE]') break;
+					try {
+						const parsed = JSON.parse(data) as { content: string };
+						accumulated += parsed.content;
+						// Update the AI entry live while streaming
+						updateChat(aiId, { isWaiting: false, message: accumulated });
+					} catch {
+						// ignore malformed SSE lines
+					}
+				}
+			}
+
+			// Finalize — ensure isWaiting is cleared even if no tokens arrived
+			updateChat(aiId, { isWaiting: false, message: accumulated || '(ไม่มีคำตอบ)' });
+		} catch (err) {
+			console.error('Streaming error:', err);
+			updateChat(aiId, { isWaiting: false, message: 'เกิดข้อผิดพลาดในการเชื่อมต่อ กรุณาลองใหม่อีกครั้ง' });
+		}
 	}
 </script>
 
@@ -153,7 +221,11 @@
 						<ChatMessageSkeleton role={chat.role} />
 					{:else}
 						<ChatMessage role={chat.role} timestamp={chat.timestamp}>
+						{#if chat.role === 'ai'}
+							<Markdown source={chat.message} />
+						{:else}
 							<p class="text-lg leading-relaxed">{chat.message}</p>
+						{/if}
 						</ChatMessage>
 					{/if}
 				{/each}

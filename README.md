@@ -89,3 +89,13 @@ python evaluate/run_eval.py --testset evaluate/testset.json --output evaluate/re
 
 Reset
 python -m ingest.build_index --reset
+
+
+# 1. Re-chunk with Thai legal separators
+python -m ingest.prepare_tax_corpus --inputs data/raw/*.json --output data/processed/tax_chunks.jsonl
+
+# 2. Rebuild BM25 index
+python -m ingest.build_bm25 --input data/processed/tax_chunks.jsonl --output data/processed/bm25_index.pkl
+
+# 3. Rebuild Chroma vector index with BGE-M3
+python -m ingest.build_index --reset

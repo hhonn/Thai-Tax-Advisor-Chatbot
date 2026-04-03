@@ -11,14 +11,14 @@ from fastapi.responses import StreamingResponse
 from pydantic import BaseModel, Field
 from dotenv import load_dotenv
 
-sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
-load_dotenv()
-
 from rag_chain import (
     MAX_QUESTION_LENGTH,
     answer_question,
     stream_answer,
 )
+
+sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+load_dotenv()
 
 logger = logging.getLogger(__name__)
 

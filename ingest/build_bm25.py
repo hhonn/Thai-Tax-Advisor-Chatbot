@@ -24,6 +24,8 @@ def main():
         text = row.get("text", "")
         tokens = word_tokenize(text, engine="newmm")
         tokenized_corpus.append(tokens)
+
+        print(f"Tokenized chunk:tokenized_corpus length={len(tokenized_corpus)} | tokens={len(tokens)}")
         
     print("Building BM25 index...")
     bm25 = BM25Okapi(tokenized_corpus)

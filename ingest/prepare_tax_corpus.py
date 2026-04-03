@@ -1,18 +1,60 @@
 ﻿import json
+import re
 import argparse
 from pathlib import Path
 from langchain_text_splitters import RecursiveCharacterTextSplitter
+
+# Thai legal document separators (highest to lowest priority)
+THAI_LEGAL_SEPARATORS = [
+    "\nมาตรา ",       # Legal article / section
+    "\nหมวด ",        # Chapter
+    "\nส่วนที่ ",     # Part
+    "\nข้อ ",          # Clause
+    "\nบทที่ ",       # Chapter (alt)
+    "\n\n",            # Paragraph break
+    "\n",              # Line break
+    " ",               # Space
+    "",                # Character fallback
+]
+
+# Heuristic category detection from tax_id / law field
+CATEGORY_KEYWORDS = {
+    "ภาษีเงินได้บุคคลธรรมดา": "PIT",
+    "บุคคลธรรมดา": "PIT",
+    "ภาษีเงินได้นิติบุคคล": "CIT",
+    "นิติบุคคล": "CIT",
+    "ภาษีมูลค่าเพิ่ม": "VAT",
+    "VAT": "VAT",
+    "ภาษีธุรกิจเฉพาะ": "SBT",
+    "อากรแสตมป์": "SD",
+    "ภาษีหัก ณ ที่จ่าย": "WHT",
+    "หัก ณ ที่จ่าย": "WHT",
+    "ค่าลดหย่อน": "DED",
+    "ประมวลรัษฎากร": "RC",
+}
+
+def detect_category(text: str, law: str = "", section: str = "") -> str:
+    combined = f"{law} {section} {text[:200]}"
+    for keyword, cat in CATEGORY_KEYWORDS.items():
+        if keyword in combined:
+            return cat
+    return "GENERAL"
+
 
 def main():
     parser = argparse.ArgumentParser()
     parser.add_argument("--inputs", type=Path, nargs='+', required=True)        
     parser.add_argument("--output", type=Path, required=True)
+    parser.add_argument("--chunk-size", type=int, default=500,
+                        help="Target chunk size in characters (default: 500)")
+    parser.add_argument("--chunk-overlap", type=int, default=50,
+                        help="Overlap between chunks in characters (default: 50)")
     args = parser.parse_args()
 
     splitter = RecursiveCharacterTextSplitter(
-        chunk_size=1000,
-        chunk_overlap=200,
-        separators=["\n\n", "\n", " ", ""]
+        chunk_size=args.chunk_size,
+        chunk_overlap=args.chunk_overlap,
+        separators=THAI_LEGAL_SEPARATORS,
     )
 
     out_path = args.output
@@ -26,16 +68,22 @@ def main():
                 text = row.get("text", "")
                 if not text: continue
 
+                law = str(row.get('law', '')).strip()
+                section = str(row.get('section', '')).strip()
+                category = detect_category(text, law, section)
+
                 chunks = splitter.create_documents(
                     [text],
                     metadatas=[{
-                        "tax_id": str(row.get('law', '')).strip() + " " + str(row.get('section', '')).strip(),
+                        "tax_id": f"{law} {section}".strip(),
                         "url": row.get("url", ""),
-                        "source": row.get("source", "Unknown")
+                        "source": row.get("source", "Unknown"),
+                        "category": category,
+                        "law": law,
+                        "section": section,
                     }]
                 )
                 for i, chunk in enumerate(chunks):
-                    import re
                     base_id = f"{row.get('law', 'doc')}-{row.get('section', i)}"
                     safe_id = re.sub(r'[\W_]+', '_', base_id)
                     record = {

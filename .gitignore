@@ -25,4 +25,4 @@ Thumbs.db
 *.bin
 *.sqlite3
 data/*
-*/chroma.sqlite3
+*/chroma.s%qlite3
